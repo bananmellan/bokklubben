@@ -192,12 +192,17 @@ def edit_member(mid):
     member = one("SELECT * FROM members WHERE id = ?", (mid,))
     if member is None:
         abort(404)
+    is_self = mid == auth.current_member()["id"]
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         email = request.form.get("email", "").strip()
         if not name or not email:
             flash("Namn och e-post krävs.", "error")
-            return render_template("admin_member.html", member=member)
+            return render_template("admin_member.html", member=member, is_self=is_self)
+        new_admin = 1 if request.form.get("is_admin") == "1" else 0
+        if is_self and member["is_admin"] and not new_admin:
+            flash("Du kan inte ta bort admin från dig själv.", "error")
+            return redirect(url_for("admin.edit_member", mid=mid))
         execute(
             """
             UPDATE members SET name = ?, email = ?, is_admin = ?, voting_active = ?, in_wheel_pool = ?, wheel_suspended = ?
@@ -220,7 +225,7 @@ def edit_member(mid):
         )
         flash("Medlem uppdaterad.", "success")
         return redirect(url_for("admin.panel"))
-    return render_template("admin_member.html", member=member)
+    return render_template("admin_member.html", member=member, is_self=is_self)
 
 
 @bp.route("/members/<int:mid>/delete", methods=["POST"])
@@ -229,6 +234,9 @@ def delete_member(mid):
     member = one("SELECT * FROM members WHERE id = ?", (mid,))
     if member is None:
         abort(404)
+    if mid == auth.current_member()["id"]:
+        flash("Du kan inte ta bort ditt eget konto.", "error")
+        return redirect(url_for("admin.panel"))
     execute("DELETE FROM members WHERE id = ?", (mid,))
     services.ensure_round()
     audit(auth.current_member()["id"], "member_delete", f"{member['name']} <{member['email']}>")

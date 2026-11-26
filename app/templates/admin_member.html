@@ -8,6 +8,7 @@
     <label>Namn <input type="text" name="name" value="{{ member['name'] }}" required></label>
     <label>E-post <input type="email" name="email" value="{{ member['email'] }}" required></label>
     <label><input type="checkbox" name="is_admin" value="1" {% if member['is_admin'] %}checked{% endif %}> Admin</label>
+    {% if is_self and member['is_admin'] %}<p class="muted">Du kan inte ta bort admin från dig själv.</p>{% endif %}
     <label><input type="checkbox" name="voting_active" value="1" {% if member['voting_active'] %}checked{% endif %}> Har rösträtt</label>
     <label><input type="checkbox" name="in_wheel_pool" value="1" {% if member['in_wheel_pool'] %}checked{% endif %}> Kandidat i hjulet</label>
     <label><input type="checkbox" name="wheel_suspended" value="1" {% if member['wheel_suspended'] %}checked{% endif %}> Avstängd från hjulet (ej läst 2 senaste böckerna)</label>
