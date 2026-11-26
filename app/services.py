@@ -1,6 +1,6 @@
 import random
 
-from .db import execute, one, query
+from .db import audit, execute, one, query
 
 STATES = ["spin", "candidates", "voting", "decided", "meeting", "done"]
 
@@ -36,20 +36,46 @@ def ensure_round():
 
 
 def wheel_candidates():
-    return query("SELECT * FROM members WHERE in_wheel_pool = 1 ORDER BY lower(name), id")
+    return query(
+        "SELECT * FROM members WHERE in_wheel_pool = 1 AND wheel_suspended = 0 ORDER BY lower(name), id"
+    )
+
+
+def update_wheel_suspension(member_id, actor_id=None):
+    rows = query("SELECT id FROM rounds WHERE winner_candidate_id IS NOT NULL ORDER BY id DESC LIMIT 2")
+    if len(rows) < 2:
+        return
+    missed = 0
+    for row in rows:
+        mark = one("SELECT has_read FROM read_marks WHERE round_id = ? AND member_id = ?", (row["id"], member_id))
+        if mark is not None and not mark["has_read"]:
+            missed += 1
+    suspended = 1 if missed >= 2 else 0
+    current = one("SELECT name, wheel_suspended FROM members WHERE id = ?", (member_id,))
+    if current is None or current["wheel_suspended"] == suspended:
+        return
+    execute("UPDATE members SET wheel_suspended = ? WHERE id = ?", (suspended, member_id))
+    audit(
+        actor_id,
+        "wheel_suspension",
+        f"{current['name']} {'stängs av från hjulet' if suspended else 'får tillbaka sin plats i hjulet'} (ej läst de 2 senaste böckerna)"
+        if suspended
+        else f"{current['name']} får tillbaka sin plats i hjulet (har läst en bok igen)",
+    )
 
 
 def reset_wheel_pool():
     execute("UPDATE members SET in_wheel_pool = 1")
 
 
-def spin():
+def spin(actor_id=None):
     r = ensure_round()
     if r["state"] != "spin":
         return None, "Hjulet kan bara snurras när ingen omgång pågår"
     pool = wheel_candidates()
     if not pool:
         reset_wheel_pool()
+        audit(actor_id, "wheel_reset", "Hjulpoolen var tom – återställd till alla medlemmar automatiskt")
         pool = wheel_candidates()
     if not pool:
         return None, "Det finns inga medlemmar i hjulpoolen"
@@ -57,6 +83,8 @@ def spin():
     execute("UPDATE members SET in_wheel_pool = 0 WHERE id = ?", (winner["id"],))
     if not wheel_candidates():
         reset_wheel_pool()
+        audit(actor_id, "wheel_reset", "Hjulpoolen tömdes – återställd till alla medlemmar automatiskt")
+    audit(actor_id, "spin", f"Omgång #{r['id']}: {winner['name']} snurrades fram som bokväljare")
     execute(
         "UPDATE rounds SET chooser_id = ?, state = 'candidates', updated_at = datetime('now') WHERE id = ?",
         (winner["id"], r["id"]),
@@ -149,7 +177,7 @@ def set_meeting_date(round_id, date_str):
     )
 
 
-def mark_read(round_id, member_id, has_read):
+def mark_read(round_id, member_id, has_read, actor_id=None):
     has_read = 1 if has_read else 0
     execute(
         """
@@ -159,6 +187,8 @@ def mark_read(round_id, member_id, has_read):
         (round_id, member_id, has_read),
     )
     execute("UPDATE members SET voting_active = ? WHERE id = ?", (has_read, member_id))
+    update_wheel_suspension(member_id, actor_id=actor_id)
+    audit(actor_id, "read_mark", f"Omgång #{round_id}: {'har läst' if has_read else 'har inte läst'} boken")
     members = query("SELECT id FROM members")
     marked = {m["member_id"] for m in query("SELECT member_id FROM read_marks WHERE round_id = ?", (round_id,))}
     if members and all(m["id"] in marked for m in members):

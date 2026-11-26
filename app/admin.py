@@ -1,8 +1,8 @@
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, send_file, url_for
 
-from . import services
+from . import auth, services
 from .auth import admin_required
-from .db import backup_database, execute, one, query
+from .db import audit, backup_database, execute, one, query
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -49,6 +49,7 @@ def past_book_add():
     pid = execute("INSERT INTO past_books(title, author, read_date) VALUES (?, ?, ?)", (title, author, read_date))
     for mid in request.form.getlist("member_ids"):
         execute("INSERT OR IGNORE INTO past_book_readers(past_book_id, member_id) VALUES (?, ?)", (pid, int(mid)))
+    audit(auth.current_member()["id"], "past_book_add", f"'{title}' ({read_date or 'okänt datum'})")
     flash("Tidigare bok tillagd.", "success")
     return redirect(url_for("admin.panel"))
 
@@ -71,6 +72,7 @@ def past_book_edit(pid):
         execute("DELETE FROM past_book_readers WHERE past_book_id = ?", (pid,))
         for mid in request.form.getlist("member_ids"):
             execute("INSERT OR IGNORE INTO past_book_readers(past_book_id, member_id) VALUES (?, ?)", (pid, int(mid)))
+        audit(auth.current_member()["id"], "past_book_edit", f"Tidigare bok #{pid} -> '{title}'")
         flash("Tidigare bok uppdaterad.", "success")
         return redirect(url_for("admin.panel"))
     members = query("SELECT * FROM members ORDER BY lower(name), id")
@@ -85,8 +87,55 @@ def past_book_delete(pid):
     if pb is None:
         abort(404)
     execute("DELETE FROM past_books WHERE id = ?", (pid,))
+    audit(auth.current_member()["id"], "past_book_delete", f"'{pb['title']}' borttagen")
     flash(f"'{pb['title']}' borttagen från historiken.", "success")
     return redirect(url_for("admin.panel"))
+
+
+ACTION_LABELS = {
+    "spin": "Hjul snurrat",
+    "wheel_reset": "Hjulpool återställd",
+    "wheel_suspension": "Hjulplats ändrad",
+    "vote": "Röst lagd",
+    "meeting_date": "Mötesdatum ändrat",
+    "read_mark": "Läsning markerad",
+    "candidate_add": "Kandidat tillagd",
+    "candidate_delete": "Kandidat borttagen",
+    "voting_open": "Omröstning öppnad",
+    "avatar_upload": "Profilbild uppladdad",
+    "member_add": "Medlem tillagd",
+    "member_edit": "Medlem ändrad",
+    "member_delete": "Medlem borttagen",
+    "round_state": "Omgångsstatus ändrad",
+    "round_chooser": "Bokväljare ändrad",
+    "round_meeting": "Mötesdatum ändrat (admin)",
+    "round_winner": "Vinnare ändrad",
+    "round_delete": "Omgång borttagen",
+    "candidate_edit": "Kandidat ändrad",
+    "vote_add": "Röst ändrad (admin)",
+    "vote_edit": "Röst ändrad (admin)",
+    "vote_delete": "Röst borttagen",
+    "readmark_set": "Läsmarkering ändrad (admin)",
+    "readmark_delete": "Läsmarkering borttagen",
+    "past_book_add": "Tidigare bok tillagd",
+    "past_book_edit": "Tidigare bok ändrad",
+    "past_book_delete": "Tidigare bok borttagen",
+    "settings": "Inställning ändrad",
+    "backup": "Backup skapad",
+}
+
+
+@bp.route("/audit")
+@admin_required
+def audit_page():
+    entries = query(
+        """
+        SELECT a.*, m.name AS actor_name
+        FROM audit_log a LEFT JOIN members m ON m.id = a.actor_id
+        ORDER BY a.id DESC LIMIT 300
+        """
+    )
+    return render_template("admin_audit.html", entries=entries, labels=ACTION_LABELS)
 
 
 @bp.route("/settings", methods=["POST"])
@@ -94,6 +143,7 @@ def past_book_delete(pid):
 def settings():
     club_name = request.form.get("club_name", "").strip() or "Bokklubben"
     services.set_setting("club_name", club_name)
+    audit(auth.current_member()["id"], "settings", f"club_name='{club_name}'")
     flash("Inställningar sparade.", "success")
     return redirect(url_for("admin.panel"))
 
@@ -102,6 +152,7 @@ def settings():
 @admin_required
 def backup_now():
     path = backup_database(current_app.config["DATABASE_PATH"], current_app.config["DATA_DIR"] / "backups")
+    audit(auth.current_member()["id"], "backup", path.name)
     flash(f"Backup skapad: {path.name}", "success")
     return redirect(url_for("admin.panel"))
 
@@ -130,6 +181,7 @@ def add_member():
         "INSERT INTO members(name, email, is_admin, voting_active, in_wheel_pool) VALUES (?, ?, ?, 1, ?)",
         (name, email, 1 if is_admin else 0, 1 if in_pool else 0),
     )
+    audit(auth.current_member()["id"], "member_add", f"{name} <{email}> (admin={is_admin}, hjulpool={in_pool})")
     flash(f"Medlemmen {name} är tillagd.", "success")
     return redirect(url_for("admin.panel"))
 
@@ -148,7 +200,7 @@ def edit_member(mid):
             return render_template("admin_member.html", member=member)
         execute(
             """
-            UPDATE members SET name = ?, email = ?, is_admin = ?, voting_active = ?, in_wheel_pool = ?
+            UPDATE members SET name = ?, email = ?, is_admin = ?, voting_active = ?, in_wheel_pool = ?, wheel_suspended = ?
             WHERE id = ?
             """,
             (
@@ -157,8 +209,14 @@ def edit_member(mid):
                 1 if request.form.get("is_admin") == "1" else 0,
                 1 if request.form.get("voting_active") == "1" else 0,
                 1 if request.form.get("in_wheel_pool") == "1" else 0,
+                1 if request.form.get("wheel_suspended") == "1" else 0,
                 mid,
             ),
+        )
+        audit(
+            auth.current_member()["id"],
+            "member_edit",
+            f"{name} <{email}>: admin={request.form.get('is_admin') == '1'}, rösträtt={request.form.get('voting_active') == '1'}, hjulpool={request.form.get('in_wheel_pool') == '1'}, hjulavstängd={request.form.get('wheel_suspended') == '1'}",
         )
         flash("Medlem uppdaterad.", "success")
         return redirect(url_for("admin.panel"))
@@ -173,6 +231,7 @@ def delete_member(mid):
         abort(404)
     execute("DELETE FROM members WHERE id = ?", (mid,))
     services.ensure_round()
+    audit(auth.current_member()["id"], "member_delete", f"{member['name']} <{member['email']}>")
     flash(f"Medlemmen {member['name']} är borttagen.", "success")
     return redirect(url_for("admin.panel"))
 
@@ -181,6 +240,7 @@ def delete_member(mid):
 @admin_required
 def wheel_reset():
     services.reset_wheel_pool()
+    audit(auth.current_member()["id"], "wheel_reset", "Manuell återställning av hjulpoolen")
     flash("Hjulpoolen är återställd – alla medlemmar är kandidater igen.", "success")
     return redirect(url_for("admin.panel"))
 
@@ -222,7 +282,12 @@ def round_state(rid):
     state = request.form.get("state", "")
     if state not in services.STATES:
         abort(400)
-    execute("UPDATE rounds SET state = ?, updated_at = datetime('now') WHERE id = ?", (state, rid))
+    old = one("SELECT state FROM rounds WHERE id = ?", (rid,))
+    if state == "done":
+        services.close_round(rid)
+    else:
+        execute("UPDATE rounds SET state = ?, updated_at = datetime('now') WHERE id = ?", (state, rid))
+    audit(auth.current_member()["id"], "round_state", f"Omgång #{rid}: {old['state'] if old else '?'} -> {state}")
     flash("Omgångens status ändrad.", "success")
     return redirect(url_for("admin.round_detail", rid=rid))
 
@@ -234,6 +299,10 @@ def round_chooser(rid):
     if chooser_id and one("SELECT id FROM members WHERE id = ?", (chooser_id,)) is None:
         abort(400)
     execute("UPDATE rounds SET chooser_id = ?, updated_at = datetime('now') WHERE id = ?", (chooser_id, rid))
+    if chooser_id:
+        execute("UPDATE members SET in_wheel_pool = 0 WHERE id = ?", (chooser_id,))
+    name = one("SELECT name FROM members WHERE id = ?", (chooser_id,))["name"] if chooser_id else "ingen"
+    audit(auth.current_member()["id"], "round_chooser", f"Omgång #{rid}: bokväljare -> {name}")
     flash("Bokväljare ändrad.", "success")
     return redirect(url_for("admin.round_detail", rid=rid))
 
@@ -243,6 +312,7 @@ def round_chooser(rid):
 def round_meeting(rid):
     date = request.form.get("date", "").strip() or None
     execute("UPDATE rounds SET meeting_date = ?, updated_at = datetime('now') WHERE id = ?", (date, rid))
+    audit(auth.current_member()["id"], "round_meeting", f"Omgång #{rid}: mötesdatum -> {date or 'borttaget'}")
     flash("Mötesdatum ändrat.", "success")
     return redirect(url_for("admin.round_detail", rid=rid))
 
@@ -257,6 +327,8 @@ def round_winner(rid):
         "UPDATE rounds SET winner_candidate_id = ?, state = CASE WHEN ? IS NOT NULL THEN 'decided' ELSE state END, updated_at = datetime('now') WHERE id = ?",
         (winner_id, winner_id, rid),
     )
+    title = one("SELECT title FROM book_candidates WHERE id = ?", (winner_id,))["title"] if winner_id else "ingen"
+    audit(auth.current_member()["id"], "round_winner", f"Omgång #{rid}: vinnare -> {title}")
     flash("Vinnare ändrad.", "success")
     return redirect(url_for("admin.round_detail", rid=rid))
 
@@ -266,6 +338,7 @@ def round_winner(rid):
 def round_delete(rid):
     execute("DELETE FROM rounds WHERE id = ?", (rid,))
     services.ensure_round()
+    audit(auth.current_member()["id"], "round_delete", f"Omgång #{rid} borttagen")
     flash("Omgången är borttagen.", "success")
     return redirect(url_for("admin.panel"))
 
@@ -283,6 +356,7 @@ def round_add_candidate(rid):
         "INSERT INTO book_candidates(round_id, title, author, description) VALUES (?, ?, ?, ?)",
         (rid, title, author, description),
     )
+    audit(auth.current_member()["id"], "candidate_add", f"Omgång #{rid}: '{title}'")
     flash("Kandidat tillagd.", "success")
     return redirect(url_for("admin.round_detail", rid=rid))
 
@@ -301,6 +375,7 @@ def candidate_edit(cid):
         "UPDATE book_candidates SET title = ?, author = ?, description = ? WHERE id = ?",
         (title, request.form.get("author", "").strip(), request.form.get("description", "").strip(), cid),
     )
+    audit(auth.current_member()["id"], "candidate_edit", f"Omgång #{cand['round_id']}: kandidat #{cid} -> '{title}'")
     flash("Kandidat uppdaterad.", "success")
     return redirect(url_for("admin.round_detail", rid=cand["round_id"]))
 
@@ -312,6 +387,7 @@ def candidate_delete(cid):
     if cand is None:
         abort(404)
     execute("DELETE FROM book_candidates WHERE id = ?", (cid,))
+    audit(auth.current_member()["id"], "candidate_delete", f"Omgång #{cand['round_id']}: kandidat '{cand['title']}' borttagen")
     flash("Kandidat borttagen.", "success")
     return redirect(url_for("admin.round_detail", rid=cand["round_id"]))
 
@@ -333,6 +409,8 @@ def vote_add(rid):
         (rid, candidate_id, member_id, weight),
     )
     services.maybe_decide(rid)
+    mname = one("SELECT name FROM members WHERE id = ?", (member_id,))["name"]
+    audit(auth.current_member()["id"], "vote_add", f"Omgång #{rid}: {mname} vikt {weight}")
     flash("Röst sparad.", "success")
     return redirect(url_for("admin.round_detail", rid=rid))
 
@@ -347,6 +425,7 @@ def vote_edit(vid):
     weight = request.form.get("weight", type=float)
     execute("UPDATE votes SET candidate_id = ?, weight = ? WHERE id = ?", (candidate_id, weight, vid))
     services.maybe_decide(vote["round_id"])
+    audit(auth.current_member()["id"], "vote_edit", f"Omgång #{vote['round_id']}: röst #{vid} -> kandidat {candidate_id}, vikt {weight}")
     flash("Röst uppdaterad.", "success")
     return redirect(url_for("admin.round_detail", rid=vote["round_id"]))
 
@@ -358,6 +437,7 @@ def vote_delete(vid):
     if vote is None:
         abort(404)
     execute("DELETE FROM votes WHERE id = ?", (vid,))
+    audit(auth.current_member()["id"], "vote_delete", f"Omgång #{vote['round_id']}: röst #{vid} borttagen")
     flash("Röst borttagen.", "success")
     return redirect(url_for("admin.round_detail", rid=vote["round_id"]))
 
@@ -377,6 +457,8 @@ def readmark_set(rid):
         (rid, member_id, has_read),
     )
     execute("UPDATE members SET voting_active = ? WHERE id = ?", (has_read, member_id))
+    services.update_wheel_suspension(member_id, actor_id=auth.current_member()["id"])
+    audit(auth.current_member()["id"], "readmark_set", f"Omgång #{rid}: medlem {member_id} -> {'läst' if has_read else 'inte läst'}")
     flash("Läsmarkering sparad.", "success")
     return redirect(url_for("admin.round_detail", rid=rid))
 
@@ -388,5 +470,7 @@ def readmark_delete(rmid):
     if rm is None:
         abort(404)
     execute("DELETE FROM read_marks WHERE id = ?", (rmid,))
+    services.update_wheel_suspension(rm["member_id"], actor_id=auth.current_member()["id"])
+    audit(auth.current_member()["id"], "readmark_delete", f"Omgång #{rm['round_id']}: läsmarkering #{rmid} borttagen")
     flash("Läsmarkering borttagen.", "success")
     return redirect(url_for("admin.round_detail", rid=rm["round_id"]))

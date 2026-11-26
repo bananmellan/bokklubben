@@ -150,6 +150,7 @@
         {% if m['is_admin'] %}<span class="badge">admin</span>{% endif %}
         {% if not m['voting_active'] %}<span class="badge warn">ingen rösträtt</span>{% endif %}
         {% if not m['in_wheel_pool'] %}<span class="badge muted-badge">ej i hjulpoolen</span>{% endif %}
+        {% if m['wheel_suspended'] %}<span class="badge warn">avstängd från hjulet</span>{% endif %}
       </li>
     {% endfor %}
   </ul>

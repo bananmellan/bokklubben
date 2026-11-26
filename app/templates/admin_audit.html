@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Ändringslogg – {{ club_name }}{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Ändringslogg</h2>
+  <p class="muted">De senaste 300 händelserna – vem som gjorde vad och när. Används för att spåra och rätta misstag.</p>
+  <table class="table">
+    <thead><tr><th>Tid</th><th>Aktör</th><th>Händelse</th><th>Detaljer</th></tr></thead>
+    <tbody>
+      {% for e in entries %}
+        <tr>
+          <td>{{ e['ts'] }}</td>
+          <td>{{ e['actor_name'] or 'system' }}</td>
+          <td>{{ labels.get(e['action'], e['action']) }}</td>
+          <td>{{ e['details'] }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="muted">Inga händelser än.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p><a class="btn" href="{{ url_for('admin.panel') }}">Tillbaka till admin</a></p>
+</section>
+{% endblock %}

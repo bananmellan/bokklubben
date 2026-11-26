@@ -102,9 +102,32 @@ def close_db(_exc=None):
         db.close()
 
 
+def _migration_003_wheel_suspended(db):
+    cols = {row[1] for row in db.execute("PRAGMA table_info(members)")}
+    if "wheel_suspended" not in cols:
+        db.execute("ALTER TABLE members ADD COLUMN wheel_suspended INTEGER NOT NULL DEFAULT 0")
+
+
 MIGRATIONS = [
     ("001_base", SCHEMA),
+    (
+        "002_audit_log",
+        """
+        CREATE TABLE IF NOT EXISTS audit_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ts TEXT NOT NULL DEFAULT (datetime('now')),
+            actor_id INTEGER REFERENCES members(id) ON DELETE SET NULL,
+            action TEXT NOT NULL,
+            details TEXT NOT NULL DEFAULT ''
+        );
+        """,
+    ),
+    ("003_wheel_suspended", _migration_003_wheel_suspended),
 ]
+
+
+def audit(actor_id, action, details=""):
+    execute("INSERT INTO audit_log(actor_id, action, details) VALUES (?, ?, ?)", (actor_id, action, details))
 
 BACKUP_KEEP = 50
 
@@ -147,7 +170,10 @@ def init_db(app):
     applied = {r["version"] for r in db.execute("SELECT version FROM schema_migrations")}
     for version, sql in MIGRATIONS:
         if version not in applied:
-            db.executescript(sql)
+            if callable(sql):
+                sql(db)
+            else:
+                db.executescript(sql)
             db.execute("INSERT INTO schema_migrations(version) VALUES (?)", (version,))
     db.execute("INSERT OR IGNORE INTO settings(key, value) VALUES ('club_name', 'Bokklubben')")
     has_members = db.execute("SELECT COUNT(*) AS c FROM members").fetchone()["c"] > 0

@@ -18,6 +18,7 @@
             {% if m['is_admin'] %}Admin · {% endif %}
             rösträtt: {{ 'ja' if m['voting_active'] else 'nej' }} ·
             hjulpool: {{ 'ja' if m['in_wheel_pool'] else 'nej (efter nästa återställning)' }}
+            {% if m['wheel_suspended'] %} · <span class="badge warn">avstängd från hjulet tills hen läst igen</span>{% endif %}
           </span>
         </div>
         {% if member['id'] == m['id'] or member['is_admin'] %}

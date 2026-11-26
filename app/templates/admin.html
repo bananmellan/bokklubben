@@ -47,7 +47,7 @@
   <p class="muted">Nya medlemmar får rösträtt direkt, men blir kandidater i hjulet först efter nästa återställning (om du inte kryssar i rutan ovan).</p>
   <table class="table">
     <thead>
-      <tr><th>Namn</th><th>E-post</th><th>Admin</th><th>Rösträtt</th><th>Hjulpool</th><th></th></tr>
+      <tr><th>Namn</th><th>E-post</th><th>Admin</th><th>Rösträtt</th><th>Hjulpool</th><th>Hjulstatus</th><th></th></tr>
     </thead>
     <tbody>
       {% for m in members %}
@@ -57,11 +57,13 @@
           <td>{{ 'ja' if m['is_admin'] else 'nej' }}</td>
           <td>{{ 'ja' if m['voting_active'] else 'nej' }}</td>
           <td>{{ 'ja' if m['in_wheel_pool'] else 'nej' }}</td>
+          <td>{% if m['wheel_suspended'] %}<span class="badge warn">avstängd</span>{% else %}ok{% endif %}</td>
           <td><a class="btn small" href="{{ url_for('admin.edit_member', mid=m['id']) }}">Redigera</a></td>
         </tr>
       {% endfor %}
     </tbody>
   </table>
+  <p><a class="btn" href="{{ url_for('admin.audit_page') }}">Ändringslogg</a></p>
 </section>
 
 <section class="card">

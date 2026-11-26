@@ -18,7 +18,7 @@ from PIL import Image
 
 from . import auth, services
 from .auth import admin_required, login_required
-from .db import execute, one, query
+from .db import audit, execute, one, query
 
 bp = Blueprint("main", __name__)
 
@@ -174,7 +174,7 @@ def api_wheel():
 @bp.route("/api/spin", methods=["POST"])
 @login_required
 def api_spin():
-    result, error = services.spin()
+    result, error = services.spin(auth.current_member()["id"])
     if error:
         return jsonify({"ok": False, "error": error}), 409
     return jsonify({"ok": True, "index": result["index"], "member": member_public(result["member"])})
@@ -204,6 +204,7 @@ def add_candidate():
         "INSERT INTO book_candidates(round_id, title, author, description) VALUES (?, ?, ?, ?)",
         (r["id"], title, author, description),
     )
+    audit(member["id"], "candidate_add", f"Omgång #{r['id']}: '{title}'")
     flash("Kandidat tillagd.", "success")
     return redirect(url_for("main.index"))
 
@@ -219,6 +220,7 @@ def delete_candidate(cid):
     if r["state"] != "candidates" or (r["chooser_id"] != member["id"] and not member["is_admin"]):
         abort(403)
     execute("DELETE FROM book_candidates WHERE id = ?", (cid,))
+    audit(member["id"], "candidate_delete", f"Omgång #{cand['round_id']}: '{cand['title']}' borttagen")
     flash("Kandidat borttagen.", "success")
     return redirect(url_for("main.index"))
 
@@ -235,6 +237,7 @@ def submit_candidates():
         flash("Det måste finnas exakt 3 kandidater innan omröstningen startar.", "error")
         return redirect(url_for("main.index"))
     execute("UPDATE rounds SET state = 'voting', updated_at = datetime('now') WHERE id = ?", (r["id"],))
+    audit(member["id"], "voting_open", f"Omgång #{r['id']}")
     flash("Omröstningen är öppen!", "success")
     return redirect(url_for("main.index"))
 
@@ -249,6 +252,12 @@ def vote():
     if error:
         flash(error, "error")
     else:
+        cand = one("SELECT title FROM book_candidates WHERE id = ?", (candidate_id,))
+        audit(
+            member["id"],
+            "vote",
+            f"Omgång #{r['id']}: röstade på '{cand['title'] if cand else candidate_id}' (vikt {services.vote_weight(member, r)})",
+        )
         flash("Din röst är registrerad.", "success")
     return redirect(url_for("main.index"))
 
@@ -265,6 +274,7 @@ def meeting():
         flash("Välj ett datum.", "error")
         return redirect(url_for("main.index"))
     services.set_meeting_date(r["id"], date)
+    audit(member["id"], "meeting_date", f"Omgång #{r['id']}: mötesdatum satt till {date}")
     flash("Mötesdatum sparat.", "success")
     return redirect(url_for("main.index"))
 
@@ -278,7 +288,7 @@ def read():
         flash("Boken måste vara vald och ett mötesdatum satt innan du kan markera läsning.", "error")
         return redirect(url_for("main.index"))
     has_read = request.form.get("has_read") == "1"
-    services.mark_read(r["id"], member["id"], has_read)
+    services.mark_read(r["id"], member["id"], has_read, actor_id=member["id"])
     flash("Läsning markerad." if has_read else "Markering sparad – kom ihåg att din rösträtt är pausad tills du läst en bok.", "success" if has_read else "info")
     return redirect(url_for("main.index"))
 
@@ -318,6 +328,7 @@ def upload_avatar(mid):
     filename = f"member_{mid}.png"
     img.save(current_app.config["UPLOAD_DIR"] / filename, "PNG")
     execute("UPDATE members SET avatar = ? WHERE id = ?", (filename, mid))
+    audit(member["id"], "avatar_upload", f"Medlem #{mid}")
     flash("Profilbild uppdaterad.", "success")
     return redirect(url_for("main.members"))
 
