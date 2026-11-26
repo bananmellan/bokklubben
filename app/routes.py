@@ -129,6 +129,7 @@ def login():
             try:
                 auth.send_code_email(member, code, services.get_setting("club_name", "Bokklubben"))
             except Exception:
+                current_app.logger.exception("Kunde inte skicka inloggningskod via SMTP")
                 flash("Kunde inte skicka e-post. Kontakta administratören.", "error")
                 return render_template("login.html")
         return render_template("verify.html", email=email, dev_code=dev_code)
