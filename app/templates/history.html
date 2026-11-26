@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Historik – {{ club_name }}{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Historik</h2>
+  <table class="table">
+    <thead>
+      <tr><th>Omgång</th><th>Status</th><th>Bokväljare</th><th>Vald bok</th><th>Möte</th></tr>
+    </thead>
+    <tbody>
+      {% for r in rounds %}
+        <tr>
+          <td>#{{ r['id'] }}</td>
+          <td>{{ state_labels[r['state']] }}</td>
+          <td>{{ r['chooser_name'] or '–' }}</td>
+          <td>{% if r['winner_title'] %}{{ r['winner_title'] }}{% else %}–{% endif %}</td>
+          <td>{{ r['meeting_date'] or '–' }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="muted">Inga omgångar än.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

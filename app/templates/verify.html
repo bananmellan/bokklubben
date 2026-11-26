@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Ange kod – {{ club_name }}{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h2>Ange din kod</h2>
+  <p>Vi skickade en kod till <strong>{{ email }}</strong>.</p>
+  {% if dev_code %}
+    <p class="dev-code">Utvecklingsläge: din kod är <strong>{{ dev_code }}</strong></p>
+  {% endif %}
+  <form method="post" action="{{ url_for('main.verify', email=email) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="email" value="{{ email }}">
+    <label>Kod
+      <input type="text" name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autofocus>
+    </label>
+    <button type="submit" class="btn primary">Logga in</button>
+  </form>
+  <p><a href="{{ url_for('main.login') }}">Skicka en ny kod</a></p>
+</section>
+{% endblock %}

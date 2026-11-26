@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Admin – {{ club_name }}{% endblock %}
+{% block content %}
+
+<section class="card">
+  <h2>Inställningar</h2>
+  <form method="post" action="{{ url_for('admin.settings') }}" class="inline-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Klubbens namn <input type="text" name="club_name" value="{{ club_name }}"></label>
+    <button type="submit" class="btn">Spara</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Hjulpool</h2>
+  <p>Kandidater just nu ({{ pool | length }}): {{ pool | map(attribute='name') | join(', ') or 'inga' }}</p>
+  <form method="post" action="{{ url_for('admin.wheel_reset') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn">Återställ hjulpoolen (alla blir kandidater)</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2>Medlemmar</h2>
+  <form method="post" action="{{ url_for('admin.add_member') }}" class="inline-form wrap">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="text" name="name" placeholder="Namn" required>
+    <input type="email" name="email" placeholder="E-post" required>
+    <label><input type="checkbox" name="is_admin" value="1"> Admin</label>
+    <label><input type="checkbox" name="in_wheel_pool" value="1"> I hjulpoolen direkt</label>
+    <button type="submit" class="btn primary">Lägg till medlem</button>
+  </form>
+  <p class="muted">Nya medlemmar får rösträtt direkt, men blir kandidater i hjulet först efter nästa återställning (om du inte kryssar i rutan ovan).</p>
+  <table class="table">
+    <thead>
+      <tr><th>Namn</th><th>E-post</th><th>Admin</th><th>Rösträtt</th><th>Hjulpool</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for m in members %}
+        <tr>
+          <td>{{ m['name'] }}</td>
+          <td>{{ m['email'] }}</td>
+          <td>{{ 'ja' if m['is_admin'] else 'nej' }}</td>
+          <td>{{ 'ja' if m['voting_active'] else 'nej' }}</td>
+          <td>{{ 'ja' if m['in_wheel_pool'] else 'nej' }}</td>
+          <td><a class="btn small" href="{{ url_for('admin.edit_member', mid=m['id']) }}">Redigera</a></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="card">
+  <h2>Omgångar</h2>
+  <table class="table">
+    <thead>
+      <tr><th>Omgång</th><th>Status</th><th>Bokväljare</th><th>Vinnande bok</th><th>Möte</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for r in rounds %}
+        <tr>
+          <td>#{{ r['id'] }}</td>
+          <td>{{ state_labels[r['state']] }}</td>
+          <td>{{ r['chooser_name'] or '–' }}</td>
+          <td>{{ r['winner_title'] or '–' }}</td>
+          <td>{{ r['meeting_date'] or '–' }}</td>
+          <td><a class="btn small" href="{{ url_for('admin.round_detail', rid=r['id']) }}">Redigera</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="muted">Inga omgångar än.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+{% endblock %}

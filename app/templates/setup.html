@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Kom igång – {{ club_name }}{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h2>Välkommen till {{ club_name }}!</h2>
+  <p>Skapa det första adminkontot för att komma igång. Inloggning sker sedan med en kod som skickas till e-post.</p>
+  <form method="post" action="{{ url_for('main.setup') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Namn
+      <input type="text" name="name" required autofocus>
+    </label>
+    <label>E-post
+      <input type="email" name="email" required>
+    </label>
+    <button type="submit" class="btn primary">Skapa adminkonto</button>
+  </form>
+</section>
+{% endblock %}

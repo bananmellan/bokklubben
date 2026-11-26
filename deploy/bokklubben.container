@@ -1,0 +1,26 @@
+[Unit]
+Description=Bokklubben - bokklubbens webbapp
+Documentation=https://github.com/bananmellan/bokklubben
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=ghcr.io/bananmellan/bokklubben:latest
+ContainerName=bokklubben
+PublishPort=8080:8000
+Volume=/srv/bokklubben/data:/data:Z
+AddHost=host.containers.internal:host-gateway
+Environment=SMTP_HOST=host.containers.internal
+Environment=SMTP_PORT=25
+Environment=SMTP_FROM=bokklubben@example.com
+# Environment=SMTP_USERNAME=
+# Environment=SMTP_PASSWORD=
+# Environment=SMTP_STARTTLS=true
+# Environment=SECRET_KEY=byt-ut-mot-en-lang-hemlighet
+# Environment=DEV_MODE=false
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

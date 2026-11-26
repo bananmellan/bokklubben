@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}{{ club_name }} – översikt{% endblock %}
+{% block content %}
+
+<section class="card">
+  <h2>Omgång #{{ round['id'] }} <span class="badge">{{ state_labels[round['state']] }}</span></h2>
+  <p class="muted">
+    {% if not member['voting_active'] %}
+      Din rösträtt är pausad tills du har läst en bok i klubben.
+    {% else %}
+      Din rösträtt: {{ '1,5 poäng (du är bokväljare)' if round['chooser_id'] == member['id'] else '1 poäng' }}.
+    {% endif %}
+  </p>
+
+  {% if round['state'] == 'spin' %}
+    <h3>Snurra hjulet</h3>
+    <p>Vem som snurras fram får välja nästa 3 bokkandidater.</p>
+    <div id="wheel"
+         data-wheel="{{ wheel_json }}"
+         data-spin-url="{{ url_for('main.api_spin') }}"
+         data-csrf="{{ csrf_token() }}">
+      <canvas id="wheel-canvas" width="520" height="520"></canvas>
+      <button id="spin-btn" class="btn primary big" type="button">Snurra!</button>
+      <div id="wheel-result" class="wheel-result"></div>
+    </div>
+    <p class="muted">Kandidater i hjulpoolen just nu: {{ wheel_pool | length }} st
+      ({{ wheel_pool | map(attribute='name') | join(', ') }})
+    </p>
+  {% endif %}
+
+  {% if round['state'] == 'candidates' %}
+    <h3>Bokval av {{ chooser['name'] if chooser else 'okänd' }}</h3>
+    {% if round['chooser_id'] == member['id'] or member['is_admin'] %}
+      <p>Lägg till exakt 3 bokkandidater, sedan startar omröstningen.</p>
+      <form method="post" action="{{ url_for('main.add_candidate') }}" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="text" name="title" placeholder="Titel" required>
+        <input type="text" name="author" placeholder="Författare">
+        <input type="text" name="description" placeholder="Beskrivning (valfritt)">
+        <button type="submit" class="btn">Lägg till ({{ candidates | length }}/3)</button>
+      </form>
+      {% if candidates | length == 3 %}
+        <form method="post" action="{{ url_for('main.submit_candidates') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn primary">Starta omröstning</button>
+        </form>
+      {% endif %}
+    {% else %}
+      <p>{{ chooser['name'] if chooser else 'Någon' }} väljer just nu 3 bokkandidater…</p>
+    {% endif %}
+    <ul class="candidate-list">
+      {% for c in candidates %}
+        <li class="candidate">
+          <div>
+            <strong>{{ c['title'] }}</strong>{% if c['author'] %} – {{ c['author'] }}{% endif %}
+            {% if c['description'] %}<br><span class="muted">{{ c['description'] }}</span>{% endif %}
+          </div>
+          {% if round['state'] == 'candidates' and (round['chooser_id'] == member['id'] or member['is_admin']) %}
+            <form method="post" action="{{ url_for('main.delete_candidate', cid=c['id']) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn danger small">Ta bort</button>
+            </form>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if round['state'] == 'voting' %}
+    <h3>Rösta på en bok</h3>
+    {% if not member['voting_active'] %}
+      <p class="warning">Du har ingen rösträtt just nu.</p>
+    {% elif my_vote %}
+      <p>Du har röstat (vikt {{ my_vote['weight'] }}). Du kan ändra din röst:</p>
+    {% endif %}
+    <ul class="candidate-list">
+      {% for c in candidates %}
+        {% set t = tally | selectattr('candidate_id', 'equalto', c['id']) | first %}
+        <li class="candidate vote-card">
+          <div>
+            <strong>{{ c['title'] }}</strong>{% if c['author'] %} – {{ c['author'] }}{% endif %}
+            {% if c['description'] %}<br><span class="muted">{{ c['description'] }}</span>{% endif %}
+            <br><span class="muted">Röster: {{ t['total'] }} poäng ({{ t['nvotes'] }} röster)</span>
+          </div>
+          {% if member['voting_active'] %}
+            <form method="post" action="{{ url_for('main.vote') }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="candidate_id" value="{{ c['id'] }}">
+              <button type="submit" class="btn small {% if my_vote and my_vote['candidate_id'] == c['id'] %}primary{% endif %}">
+                {% if my_vote and my_vote['candidate_id'] == c['id'] %}Din röst{% else %}Rösta{% endif %}
+              </button>
+            </form>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+    {% if tie %}<p class="warning">Oavgjort! Admin kan välja vinnare i adminpanelen.</p>{% endif %}
+    <h4>Röster hittills</h4>
+    <ul class="muted">
+      {% for v in votes %}<li>{{ v['member_name'] }}: vikt {{ v['weight'] }}</li>{% else %}<li>Inga röster än.</li>{% endfor %}
+    </ul>
+  {% endif %}
+
+  {% if round['state'] in ['decided', 'meeting', 'done'] %}
+    {% if winner %}
+      <h3>📖 Vald bok: {{ winner['title'] }}{% if winner['author'] %} – {{ winner['author'] }}{% endif %}</h3>
+      {% if winner['description'] %}<p>{{ winner['description'] }}</p>{% endif %}
+      <p class="muted">Vald av {{ chooser['name'] if chooser else '?' }} i omgång #{{ round['id'] }}.</p>
+      <h4>Röstresultat</h4>
+      <ul class="muted">
+        {% for t in tally %}<li>{{ t['title'] }}: {{ t['total'] }} poäng ({{ t['nvotes'] }} röster)</li>{% endfor %}
+      </ul>
+    {% endif %}
+    {% if round['state'] == 'decided' %}
+      <form method="post" action="{{ url_for('main.meeting') }}" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label>Mötesdatum <input type="date" name="date" required></label>
+        <button type="submit" class="btn primary">Spara datum</button>
+      </form>
+    {% endif %}
+    {% if round['state'] in ['meeting', 'done'] %}
+      <p><strong>Möte:</strong> {{ round['meeting_date'] or 'ej satt' }}</p>
+      <h4>Har du läst boken?</h4>
+      {% if my_read %}
+        <p>Du har markerat: <strong>{{ 'läst' if my_read['has_read'] else 'inte läst' }}</strong>. Du kan ändra:</p>
+      {% endif %}
+      <form method="post" action="{{ url_for('main.read') }}" class="inline-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" name="has_read" value="1" class="btn small {% if my_read and my_read['has_read'] %}primary{% endif %}">Ja, jag har läst</button>
+        <button type="submit" name="has_read" value="0" class="btn small danger {% if my_read and not my_read['has_read'] %}primary{% endif %}">Nej, inte än</button>
+      </form>
+      <ul class="muted">
+        {% for rm in read_marks %}<li>{{ rm['member_name'] }}: {{ 'läst' if rm['has_read'] else 'inte läst' }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+  {% endif %}
+
+  {% if round['state'] == 'done' %}
+    <p>Den här omgången är avslutad. Snurra hjulet för nästa omgång!</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h3>Medlemmar</h3>
+  <ul class="member-list">
+    {% for m in members %}
+      <li>
+        {% if m['avatar'] %}<img class="avatar-sm" src="{{ url_for('main.upload', filename=m['avatar']) }}" alt="">{% endif %}
+        <strong>{{ m['name'] }}</strong>
+        {% if m['is_admin'] %}<span class="badge">admin</span>{% endif %}
+        {% if not m['voting_active'] %}<span class="badge warn">ingen rösträtt</span>{% endif %}
+        {% if not m['in_wheel_pool'] %}<span class="badge muted-badge">ej i hjulpoolen</span>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+
+{% endblock %}

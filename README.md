@@ -1,0 +1,68 @@
+# Bokklubben
+
+A website for our book club, in Swedish. One container, SQLite persistence, passwordless email login.
+
+## Features
+
+- Members are created by an admin (name + email). Login is passwordless: a 6-digit code is emailed to the member's address (via your SMTP server, e.g. postfix on the same host).
+- A spinning wheel (with each member's profile picture on its segment) picks who gets to choose the next 3 book candidates.
+- The club votes on the candidates. The chooser's vote counts 1.5 points, everyone else's 1 point. A member who hasn't read a book loses voting power until they mark that they have read one.
+- After the vote, the club picks a meeting date. When the meeting has come, each member marks whether they read the book; those who didn't lose voting power until they read a book in the club.
+- The wheel only contains members who haven't chosen yet in the current cycle. When the pool is empty it resets and everyone is a candidate again. New members become wheel candidates after the next reset (but do have voting power from the start).
+- Admins can retroactively fix mistakes: edit members, wheel pool, round state, chooser, candidates, votes, winner, meeting date and read marks.
+- Profile pictures are uploaded by each member and stored in the persistent data volume.
+
+## Run with Podman (quadlet) on Ubuntu
+
+The image is published to GHCR by the GitHub Actions workflow in `.github/workflows/container.yml` on every push to `main` (and can be triggered manually via *Run workflow*).
+
+1. Create the data directory and install the quadlet:
+
+   ```bash
+   sudo mkdir -p /srv/bokklubben/data
+   sudo cp deploy/bokklubben.container ~/.config/containers/systemd/bokklubben.container
+   ```
+
+2. Edit `~/.config/containers/systemd/bokklubben.container` and set at least `SMTP_FROM` (and `SMTP_HOST`/`SMTP_PORT` if your postfix is not reachable as `host.containers.internal:25`). Optional: `SECRET_KEY`, `SMTP_USERNAME`/`SMTP_PASSWORD`, `SMTP_STARTTLS`.
+
+3. Start it:
+
+   ```bash
+   systemctl --user daemon-reload
+   systemctl --user enable --now bokklubben.container
+   ```
+
+   The site is then available on `http://localhost:8080` (change `PublishPort` if you like).
+
+Data (SQLite database, uploaded avatars, secret key) lives in `/srv/bokklubben/data` and survives container recreation. To make the GHCR package pullable by others, set its visibility to public in the GitHub package settings.
+
+## Configuration (environment variables)
+
+| Variable | Default | Description |
+|---|---|---|
+| `DATA_DIR` | `/data` in the container | Where the SQLite DB, uploads and secret key live (mount a volume here) |
+| `SECRET_KEY` | generated and stored in `DATA_DIR` | Flask session signing key |
+| `SMTP_HOST` | `localhost` | SMTP server for login codes |
+| `SMTP_PORT` | `25` | SMTP port |
+| `SMTP_FROM` | `bokklubben@localhost` | Sender address |
+| `SMTP_USERNAME` / `SMTP_PASSWORD` | unset | Optional SMTP auth |
+| `SMTP_STARTTLS` | `false` | Use STARTTLS |
+| `SMTP_TIMEOUT` | `10` | SMTP timeout (s) |
+| `DEV_MODE` | `false` | If `true`, login codes are shown on the verify page instead of emailed (for local testing) |
+| `MAX_AVATAR_BYTES` | `2097152` | Max profile picture size |
+
+## Local development
+
+```bash
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+DEV_MODE=true DATA_DIR=./data python run.py   # http://127.0.0.1:8000
+```
+
+## Build the container image locally
+
+```bash
+podman build -t ghcr.io/bananmellan/bokklubben:latest -f Containerfile .
+podman push ghcr.io/bananmellan/bokklubben:latest
+```

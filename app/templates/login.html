@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Logga in – {{ club_name }}{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h2>Logga in</h2>
+  <p>Ange din e-postadress så skickar vi en inloggningskod.</p>
+  <form method="post" action="{{ url_for('main.login') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>E-post
+      <input type="email" name="email" required autofocus>
+    </label>
+    <button type="submit" class="btn primary">Skicka kod</button>
+  </form>
+</section>
+{% endblock %}

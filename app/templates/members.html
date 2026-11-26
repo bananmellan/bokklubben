@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Medlemmar – {{ club_name }}{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>Medlemmar</h2>
+  <ul class="member-list">
+    {% for m in members %}
+      <li class="member-row">
+        {% if m['avatar'] %}
+          <img class="avatar" src="{{ url_for('main.upload', filename=m['avatar']) }}" alt="Profilbild för {{ m['name'] }}">
+        {% else %}
+          <span class="avatar placeholder">{{ m['name'][:1] | upper }}</span>
+        {% endif %}
+        <div class="member-info">
+          <strong>{{ m['name'] }}</strong>
+          <span class="muted">{{ m['email'] }}</span>
+          <span class="muted">
+            {% if m['is_admin'] %}Admin · {% endif %}
+            rösträtt: {{ 'ja' if m['voting_active'] else 'nej' }} ·
+            hjulpool: {{ 'ja' if m['in_wheel_pool'] else 'nej (efter nästa återställning)' }}
+          </span>
+        </div>
+        {% if member['id'] == m['id'] or member['is_admin'] %}
+          <form method="post" action="{{ url_for('main.upload_avatar', mid=m['id']) }}" enctype="multipart/form-data" class="inline-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="file" name="avatar" accept="image/*" required>
+            <button type="submit" class="btn small">Ladda upp bild</button>
+          </form>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endblock %}

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf" content="{{ csrf_token() }}">
+  <title>{% block title %}{{ club_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <h1 class="brand"><a href="{{ url_for('main.index') }}">📚 {{ club_name }}</a></h1>
+    {% if member %}
+    <nav class="nav">
+      <a href="{{ url_for('main.index') }}">Översikt</a>
+      <a href="{{ url_for('main.members') }}">Medlemmar</a>
+      <a href="{{ url_for('main.history') }}">Historik</a>
+      {% if member['is_admin'] %}<a href="{{ url_for('admin.panel') }}">Admin</a>{% endif %}
+      <span class="who">{% if member['avatar'] %}<img class="avatar-sm" src="{{ url_for('main.upload', filename=member['avatar']) }}" alt="">{% endif %}{{ member['name'] }}</span>
+      <a class="logout" href="{{ url_for('main.logout') }}">Logga ut</a>
+    </nav>
+    {% endif %}
+  </header>
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <ul class="flash">
+          {% for category, message in messages %}
+            <li class="flash-{{ category }}">{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+  <script src="{{ url_for('static', filename='wheel.js') }}" defer></script>
+</body>
+</html>
