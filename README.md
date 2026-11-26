@@ -40,7 +40,12 @@ Data (SQLite database, uploaded avatars, secret key) lives in `/srv/bokklubben/d
 
 - The image only pulls anonymously if the **package** (not just the repo) is public: open https://github.com/bananmellan/bokklubben/pkgs/container/bokklubben → *Package settings* → *Change visibility* → **Public**. A private package makes ghcr return `401 unauthorized` for the anonymous token.
 - If you ever ran `podman login ghcr.io` on the server (e.g. with an expired token), podman sends those stale credentials and ghcr rejects them with `invalid username/password: unauthorized` — even for public images. Fix: `podman logout ghcr.io` (add `sudo` if you pull with `sudo`; root and your user have separate auth files), then pull again.
-- To pull with authentication instead, use a PAT with `read:packages`: `echo $PAT | podman login ghcr.io -u bananmellan --password-stdin`.
+- To pull with authentication instead (required when the repo/package is private): create a classic PAT at GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic) with scope **`read:packages`**. With 2FA enabled the account password is never accepted — the PAT *is* the password. Then, on the server:
+  ```bash
+  podman login ghcr.io -u bananmellan --password-stdin < /path/to/tokenfile
+  podman pull ghcr.io/bananmellan/bokklubben:latest
+  ```
+  Keep the token in a `chmod 600` file or env var; never commit it. Note that podman stores credentials per user: for a rootless quadlet (`systemctl --user`) log in as your user; for a root quadlet, use `sudo podman login ...`, or set `Environment=REGISTRY_AUTH_FILE=/path/to/auth.json` in the `.container` file to share one auth file.
 
 ## Configuration (environment variables)
 
