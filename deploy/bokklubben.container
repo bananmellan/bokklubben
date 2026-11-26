@@ -7,8 +7,8 @@ Wants=network-online.target
 [Container]
 Image=ghcr.io/bananmellan/bokklubben:latest
 ContainerName=bokklubben
-PublishPort=8080:8000
-Volume=/srv/bokklubben/data:/data:Z
+PublishPort=0.0.0.0:8080:8000
+Volume=bokklubben-data:/data
 AddHost=host.containers.internal:host-gateway
 Environment=SMTP_HOST=host.containers.internal
 Environment=SMTP_PORT=25

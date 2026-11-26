@@ -16,12 +16,13 @@ A website for our book club, in Swedish. One container, SQLite persistence, pass
 
 The image is published to GHCR by the GitHub Actions workflow in `.github/workflows/container.yml` on every push to `main` (and can be triggered manually via *Run workflow*).
 
-1. Create the data directory **before** enabling the service (rootless podman does not create bind-mount sources itself; without it the service fails with `statfs /srv/bokklubben/data: no such file or directory`), then install the quadlet:
+1. Install the quadlet (it uses a named volume `bokklubben-data`, which podman creates automatically — a bind-mount source like `/srv/bokklubben/data` must exist beforehand or the service fails with `statfs ... no such file or directory`):
 
    ```bash
-   sudo mkdir -p /srv/bokklubben/data
-   sudo cp deploy/bokklubben.container ~/.config/containers/systemd/bokklubben.container
+   cp deploy/bokklubben.container ~/.config/containers/systemd/bokklubben.container
    ```
+
+   The data (SQLite DB, uploaded avatars, secret key) then lives in the named volume at `~/.local/share/containers/storage/volumes/bokklubben-data/_data` and survives container recreation. If you prefer a bind mount for easy backups, replace the `Volume=` line with `Volume=/srv/bokklubben/data:/data:Z` and `mkdir -p /srv/bokklubben/data` first.
 
 2. Edit `~/.config/containers/systemd/bokklubben.container` and set at least `SMTP_FROM` (and `SMTP_HOST`/`SMTP_PORT` if your postfix is not reachable as `host.containers.internal:25`). Optional: `SECRET_KEY`, `SMTP_USERNAME`/`SMTP_PASSWORD`, `SMTP_STARTTLS`.
 
@@ -32,9 +33,9 @@ The image is published to GHCR by the GitHub Actions workflow in `.github/workfl
    systemctl --user enable --now bokklubben.container
    ```
 
-   The site is then available on `http://localhost:8080` (change `PublishPort` if you like).
+   The site is then available on `http://127.0.0.1:8080` (change `PublishPort` if you like; it is pinned to IPv4 `0.0.0.0` because pasta's dual-stack bind can reset connections arriving via `::1` — use `127.0.0.1`, not `localhost`, if you ever see `Connection reset by peer`).
 
-Data (SQLite database, uploaded avatars, secret key) lives in `/srv/bokklubben/data` and survives container recreation.
+Data (SQLite database, uploaded avatars, secret key) lives in the mounted `/data` volume and survives container recreation.
 
 ### Troubleshooting `podman pull ghcr.io/bananmellan/bokklubben:latest`
 
