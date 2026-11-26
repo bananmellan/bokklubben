@@ -34,7 +34,13 @@ The image is published to GHCR by the GitHub Actions workflow in `.github/workfl
 
    The site is then available on `http://localhost:8080` (change `PublishPort` if you like).
 
-Data (SQLite database, uploaded avatars, secret key) lives in `/srv/bokklubben/data` and survives container recreation. To make the GHCR package pullable by others, set its visibility to public in the GitHub package settings.
+Data (SQLite database, uploaded avatars, secret key) lives in `/srv/bokklubben/data` and survives container recreation.
+
+### Troubleshooting `podman pull ghcr.io/bananmellan/bokklubben:latest`
+
+- The image only pulls anonymously if the **package** (not just the repo) is public: open https://github.com/bananmellan/bokklubben/pkgs/container/bokklubben → *Package settings* → *Change visibility* → **Public**. A private package makes ghcr return `401 unauthorized` for the anonymous token.
+- If you ever ran `podman login ghcr.io` on the server (e.g. with an expired token), podman sends those stale credentials and ghcr rejects them with `invalid username/password: unauthorized` — even for public images. Fix: `podman logout ghcr.io` (add `sudo` if you pull with `sudo`; root and your user have separate auth files), then pull again.
+- To pull with authentication instead, use a PAT with `read:packages`: `echo $PAT | podman login ghcr.io -u bananmellan --password-stdin`.
 
 ## Configuration (environment variables)
 
