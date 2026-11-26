@@ -112,7 +112,7 @@
       </ul>
     {% endif %}
     {% if round['state'] == 'decided' %}
-      <form method="post" action="{{ url_for('main.meeting') }}" class="inline-form">
+      <form method="post" action="{{ url_for('main.meeting') }}" class="inline-form" data-autosave>
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label>Mötesdatum <input type="date" name="date" required></label>
         <button type="submit" class="btn primary">Spara datum</button>

@@ -21,7 +21,7 @@
           </span>
         </div>
         {% if member['id'] == m['id'] or member['is_admin'] %}
-          <form method="post" action="{{ url_for('main.upload_avatar', mid=m['id']) }}" enctype="multipart/form-data" class="inline-form">
+          <form method="post" action="{{ url_for('main.upload_avatar', mid=m['id']) }}" enctype="multipart/form-data" class="inline-form" data-autosave>
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="file" name="avatar" accept="image/*" required>
             <button type="submit" class="btn small">Ladda upp bild</button>

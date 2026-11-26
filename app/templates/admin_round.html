@@ -6,7 +6,7 @@
   <h2>Omgång #{{ round['id'] }} <span class="badge">{{ state_labels[round['state']] }}</span></h2>
 
   <div class="grid-2">
-    <form method="post" action="{{ url_for('admin.round_state', rid=round['id']) }}" class="inline-form">
+    <form method="post" action="{{ url_for('admin.round_state', rid=round['id']) }}" class="inline-form" data-autosave>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>Status
         <select name="state">
@@ -16,7 +16,7 @@
       <button type="submit" class="btn">Ändra status</button>
     </form>
 
-    <form method="post" action="{{ url_for('admin.round_chooser', rid=round['id']) }}" class="inline-form">
+    <form method="post" action="{{ url_for('admin.round_chooser', rid=round['id']) }}" class="inline-form" data-autosave>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>Bokväljare
         <select name="chooser_id">
@@ -27,13 +27,13 @@
       <button type="submit" class="btn">Ändra</button>
     </form>
 
-    <form method="post" action="{{ url_for('admin.round_meeting', rid=round['id']) }}" class="inline-form">
+    <form method="post" action="{{ url_for('admin.round_meeting', rid=round['id']) }}" class="inline-form" data-autosave>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>Mötesdatum <input type="date" name="date" value="{{ round['meeting_date'] or '' }}"></label>
       <button type="submit" class="btn">Ändra datum</button>
     </form>
 
-    <form method="post" action="{{ url_for('admin.round_winner', rid=round['id']) }}" class="inline-form">
+    <form method="post" action="{{ url_for('admin.round_winner', rid=round['id']) }}" class="inline-form" data-autosave>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <label>Vinnande bok
         <select name="winner_candidate_id">
@@ -63,7 +63,7 @@
   <ul class="candidate-list">
     {% for c in candidates %}
       <li class="candidate">
-        <form method="post" action="{{ url_for('admin.candidate_edit', cid=c['id']) }}" class="inline-form wrap">
+        <form method="post" action="{{ url_for('admin.candidate_edit', cid=c['id']) }}" class="inline-form wrap" data-autosave>
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <input type="text" name="title" value="{{ c['title'] }}" required>
           <input type="text" name="author" value="{{ c['author'] }}" placeholder="Författare">
@@ -104,7 +104,7 @@
         <tr>
           <td>{{ v['member_name'] }}</td>
           <td>
-            <form method="post" action="{{ url_for('admin.vote_edit', vid=v['id']) }}" class="inline-form">
+            <form method="post" action="{{ url_for('admin.vote_edit', vid=v['id']) }}" class="inline-form" data-autosave>
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <select name="candidate_id">
                 {% for c in candidates %}<option value="{{ c['id'] }}" {% if v['candidate_id'] == c['id'] %}selected{% endif %}>{{ c['title'] }}</option>{% endfor %}
