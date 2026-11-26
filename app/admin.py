@@ -25,7 +25,68 @@ def panel():
         """
     )
     pool = services.wheel_candidates()
-    return render_template("admin.html", members=members, rounds=rounds, pool=pool, states=services.STATES)
+    past_books = query(
+        """
+        SELECT pb.*, (SELECT COUNT(*) FROM past_book_readers p WHERE p.past_book_id = pb.id) AS nreaders
+        FROM past_books pb
+        ORDER BY pb.read_date DESC, pb.id DESC
+        """
+    )
+    return render_template(
+        "admin.html", members=members, rounds=rounds, pool=pool, states=services.STATES, past_books=past_books
+    )
+
+
+@bp.route("/past-books", methods=["POST"])
+@admin_required
+def past_book_add():
+    title = request.form.get("title", "").strip()
+    author = request.form.get("author", "").strip()
+    read_date = request.form.get("read_date", "").strip() or None
+    if not title:
+        flash("Titeln får inte vara tom.", "error")
+        return redirect(url_for("admin.panel"))
+    pid = execute("INSERT INTO past_books(title, author, read_date) VALUES (?, ?, ?)", (title, author, read_date))
+    for mid in request.form.getlist("member_ids"):
+        execute("INSERT OR IGNORE INTO past_book_readers(past_book_id, member_id) VALUES (?, ?)", (pid, int(mid)))
+    flash("Tidigare bok tillagd.", "success")
+    return redirect(url_for("admin.panel"))
+
+
+@bp.route("/past-books/<int:pid>", methods=["GET", "POST"])
+@admin_required
+def past_book_edit(pid):
+    pb = one("SELECT * FROM past_books WHERE id = ?", (pid,))
+    if pb is None:
+        abort(404)
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        if not title:
+            flash("Titeln får inte vara tom.", "error")
+            return redirect(url_for("admin.past_book_edit", pid=pid))
+        execute(
+            "UPDATE past_books SET title = ?, author = ?, read_date = ? WHERE id = ?",
+            (title, request.form.get("author", "").strip(), request.form.get("read_date", "").strip() or None, pid),
+        )
+        execute("DELETE FROM past_book_readers WHERE past_book_id = ?", (pid,))
+        for mid in request.form.getlist("member_ids"):
+            execute("INSERT OR IGNORE INTO past_book_readers(past_book_id, member_id) VALUES (?, ?)", (pid, int(mid)))
+        flash("Tidigare bok uppdaterad.", "success")
+        return redirect(url_for("admin.panel"))
+    members = query("SELECT * FROM members ORDER BY lower(name), id")
+    readers = {r["member_id"] for r in query("SELECT member_id FROM past_book_readers WHERE past_book_id = ?", (pid,))}
+    return render_template("admin_past_book.html", pb=pb, members=members, readers=readers)
+
+
+@bp.route("/past-books/<int:pid>/delete", methods=["POST"])
+@admin_required
+def past_book_delete(pid):
+    pb = one("SELECT * FROM past_books WHERE id = ?", (pid,))
+    if pb is None:
+        abort(404)
+    execute("DELETE FROM past_books WHERE id = ?", (pid,))
+    flash(f"'{pb['title']}' borttagen från historiken.", "success")
+    return redirect(url_for("admin.panel"))
 
 
 @bp.route("/settings", methods=["POST"])

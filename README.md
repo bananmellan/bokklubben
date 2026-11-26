@@ -10,6 +10,7 @@ A website for our book club, in Swedish. One container, SQLite persistence, pass
 - After the vote, the club picks a meeting date. When the meeting has come, each member marks whether they read the book; those who didn't lose voting power until they read a book in the club.
 - The wheel only contains members who haven't chosen yet in the current cycle. When the pool is empty it resets and everyone is a candidate again. New members become wheel candidates after the next reset (but do have voting power from the start).
 - Admins can retroactively fix mistakes: edit members, wheel pool, round state, chooser, candidates, votes, winner, meeting date and read marks.
+- **History & stats**: admins can backfill books read before the site existed ("tidigare böcker", with read date and which members read them). The *Statistik* page shows totals, books per year, most-read authors, per-member read counts and a list of all books (both from rounds and backfilled).
 - Profile pictures are uploaded by each member and stored in the persistent data volume.
 
 ## Run with Podman (quadlet) on Ubuntu

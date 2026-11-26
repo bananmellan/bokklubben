@@ -51,6 +51,39 @@
 </section>
 
 <section class="card">
+  <h2>Tidigare böcker (historik)</h2>
+  <p class="muted">Lägg in böcker ni läst innan denna sajt fanns, så tas de med i <a href="{{ url_for('main.stats') }}">statistiken</a>.</p>
+  <form method="post" action="{{ url_for('admin.past_book_add') }}" class="inline-form wrap">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="text" name="title" placeholder="Titel" required>
+    <input type="text" name="author" placeholder="Författare">
+    <input type="date" name="read_date">
+    <button type="submit" class="btn primary">Lägg till bok</button>
+  </form>
+  <details>
+    <summary>Vilka läste respektive bok? (kryssa i vid redigering)</summary>
+  </details>
+  <table class="table">
+    <thead>
+      <tr><th>Titel</th><th>Författare</th><th>Läsdatum</th><th>Lästa av</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for pb in past_books %}
+        <tr>
+          <td>{{ pb['title'] }}</td>
+          <td>{{ pb['author'] }}</td>
+          <td>{{ pb['read_date'] or 'okänt' }}</td>
+          <td>{{ pb['nreaders'] }}</td>
+          <td><a class="btn small" href="{{ url_for('admin.past_book_edit', pid=pb['id']) }}">Redigera</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="muted">Inga tidigare böcker än.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<section class="card">
   <h2>Omgångar</h2>
   <table class="table">
     <thead>

@@ -15,6 +15,7 @@
       <a href="{{ url_for('main.index') }}">Översikt</a>
       <a href="{{ url_for('main.members') }}">Medlemmar</a>
       <a href="{{ url_for('main.history') }}">Historik</a>
+      <a href="{{ url_for('main.stats') }}">Statistik</a>
       {% if member['is_admin'] %}<a href="{{ url_for('admin.panel') }}">Admin</a>{% endif %}
       <span class="who">{% if member['avatar'] %}<img class="avatar-sm" src="{{ url_for('main.upload', filename=member['avatar']) }}" alt="">{% endif %}{{ member['name'] }}</span>
       <a class="logout" href="{{ url_for('main.logout') }}">Logga ut</a>

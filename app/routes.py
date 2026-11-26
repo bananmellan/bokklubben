@@ -328,6 +328,81 @@ def upload(filename):
     return send_from_directory(current_app.config["UPLOAD_DIR"], filename)
 
 
+@bp.route("/stats")
+@login_required
+def stats():
+    round_books = query(
+        """
+        SELECT b.title, b.author, r.id AS round_id, r.meeting_date, r.created_at,
+               (SELECT COUNT(*) FROM read_marks rm WHERE rm.round_id = r.id AND rm.has_read = 1) AS nread
+        FROM rounds r
+        JOIN book_candidates b ON b.id = r.winner_candidate_id
+        ORDER BY coalesce(r.meeting_date, r.created_at) DESC, r.id DESC
+        """
+    )
+    past_books = query(
+        """
+        SELECT pb.id, pb.title, pb.author, pb.read_date,
+               (SELECT COUNT(*) FROM past_book_readers p WHERE p.past_book_id = pb.id) AS nread
+        FROM past_books pb
+        ORDER BY pb.read_date DESC, pb.id DESC
+        """
+    )
+
+    years = {}
+    for b in round_books:
+        y = (b["meeting_date"] or b["created_at"] or "")[:4] or "okänt"
+        years[y] = years.get(y, 0) + 1
+    for b in past_books:
+        y = (b["read_date"] or "")[:4] or "okänt"
+        years[y] = years.get(y, 0) + 1
+    per_year = sorted(years.items(), key=lambda kv: (1, "") if kv[0] == "okänt" else (0, kv[0]), reverse=True)
+
+    authors = {}
+    for b in list(round_books) + list(past_books):
+        a = (b["author"] or "").strip()
+        if a:
+            key = a.lower()
+            if key not in authors:
+                authors[key] = [a, 0]
+            authors[key][1] += 1
+    top_authors = sorted(authors.values(), key=lambda x: (-x[1], x[0].lower()))[:10]
+
+    member_stats = query(
+        """
+        SELECT m.id, m.name,
+               (SELECT COUNT(*) FROM read_marks rm JOIN rounds r ON r.id = rm.round_id
+                WHERE rm.member_id = m.id AND rm.has_read = 1 AND r.winner_candidate_id IS NOT NULL) AS round_reads,
+               (SELECT COUNT(*) FROM past_book_readers p WHERE p.member_id = m.id) AS past_reads
+        FROM members m
+        ORDER BY (round_reads + past_reads) DESC, lower(m.name)
+        """
+    )
+
+    totals = {
+        "books": len(round_books) + len(past_books),
+        "from_rounds": len(round_books),
+        "past": len(past_books),
+        "members": one("SELECT COUNT(*) AS c FROM members")["c"],
+    }
+    max_year = max([c for _, c in per_year], default=1) or 1
+    max_author = max([c for _, c in top_authors], default=1) or 1
+    max_member = max([m["round_reads"] + m["past_reads"] for m in member_stats], default=1) or 1
+
+    return render_template(
+        "stats.html",
+        round_books=round_books,
+        past_books=past_books,
+        per_year=per_year,
+        top_authors=top_authors,
+        member_stats=member_stats,
+        totals=totals,
+        max_year=max_year,
+        max_author=max_author,
+        max_member=max_member,
+    )
+
+
 @bp.route("/history")
 @login_required
 def history():

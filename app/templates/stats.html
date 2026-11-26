@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Statistik – {{ club_name }}{% endblock %}
+{% block content %}
+
+<section class="card">
+  <h2>Statistik</h2>
+  <div class="stat-cards">
+    <div class="stat-card"><span class="stat-num">{{ totals['books'] }}</span><span class="stat-label">böcker totalt</span></div>
+    <div class="stat-card"><span class="stat-num">{{ totals['from_rounds'] }}</span><span class="stat-label">via omgångar</span></div>
+    <div class="stat-card"><span class="stat-num">{{ totals['past'] }}</span><span class="stat-label">tidigare böcker</span></div>
+    <div class="stat-card"><span class="stat-num">{{ totals['members'] }}</span><span class="stat-label">medlemmar</span></div>
+  </div>
+</section>
+
+<div class="grid-2">
+  <section class="card">
+    <h3>Böcker per år</h3>
+    {% if per_year %}
+      <ul class="bar-list">
+        {% for year, count in per_year %}
+          <li>
+            <span class="bar-label">{{ year }}</span>
+            <span class="bar"><span class="bar-fill" style="width: {{ (100 * count / max_year) | round | int }}%"></span></span>
+            <span class="bar-count">{{ count }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">Inga böcker än.</p>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h3>Flest lästa författare</h3>
+    {% if top_authors %}
+      <ul class="bar-list">
+        {% for author, count in top_authors %}
+          <li>
+            <span class="bar-label">{{ author }}</span>
+            <span class="bar"><span class="bar-fill alt" style="width: {{ (100 * count / max_author) | round | int }}%"></span></span>
+            <span class="bar-count">{{ count }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">Inga författare än.</p>
+    {% endif %}
+  </section>
+</div>
+
+<section class="card">
+  <h3>Böcker lästa per medlem</h3>
+  {% if member_stats %}
+    <ul class="bar-list">
+      {% for m in member_stats %}
+        <li>
+          <span class="bar-label">{{ m['name'] }}</span>
+          <span class="bar"><span class="bar-fill" style="width: {{ (100 * (m['round_reads'] + m['past_reads']) / max_member) | round | int }}%"></span></span>
+          <span class="bar-count">{{ m['round_reads'] + m['past_reads'] }} ({{ m['round_reads'] }} omgångar, {{ m['past_reads'] }} tidigare)</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted">Inga medlemmar än.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h3>Alla böcker</h3>
+  <table class="table">
+    <thead><tr><th>Bok</th><th>Författare</th><th>Datum</th><th>Källa</th><th>Lästa av</th></tr></thead>
+    <tbody>
+      {% for b in round_books %}
+        <tr>
+          <td>{{ b['title'] }}</td>
+          <td>{{ b['author'] }}</td>
+          <td>{{ b['meeting_date'] or b['created_at'][:10] }}</td>
+          <td>Omgång #{{ b['round_id'] }}</td>
+          <td>{{ b['nread'] }}</td>
+        </tr>
+      {% endfor %}
+      {% for b in past_books %}
+        <tr>
+          <td>{{ b['title'] }}</td>
+          <td>{{ b['author'] }}</td>
+          <td>{{ b['read_date'] or 'okänt' }}</td>
+          <td>Tidigare</td>
+          <td>{{ b['nread'] }}</td>
+        </tr>
+      {% endfor %}
+      {% if not round_books and not past_books %}
+        <tr><td colspan="5" class="muted">Inga böcker än.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</section>
+
+{% endblock %}

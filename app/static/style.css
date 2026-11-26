@@ -191,3 +191,28 @@ input[type="file"] { font-size: 0.85rem; }
 }
 
 hr { border: none; border-top: 1px solid var(--line); margin: 1.2rem 0; }
+
+.stat-cards { display: flex; gap: 0.8rem; flex-wrap: wrap; }
+.stat-card {
+  flex: 1 1 8rem;
+  background: #fdf6ec;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.8rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+}
+.stat-num { font-size: 1.8rem; font-weight: 800; color: var(--accent); }
+.stat-label { color: var(--muted); font-size: 0.85rem; }
+
+.bar-list { list-style: none; padding: 0; margin: 0.4rem 0 0; }
+.bar-list li { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.45rem; }
+.bar-label { width: 9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.bar { flex: 1; background: #efe7d8; border-radius: 6px; height: 0.9rem; overflow: hidden; }
+.bar-fill { display: block; height: 100%; background: var(--accent-2); border-radius: 6px; }
+.bar-fill.alt { background: var(--accent); }
+.bar-count { min-width: 8rem; text-align: right; color: var(--muted); font-size: 0.85rem; }
+
+fieldset { border: 1px solid var(--line); border-radius: 8px; margin: 0.8rem 0; }
+legend { font-weight: 600; padding: 0 0.3rem; }

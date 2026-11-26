@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Redigera tidigare bok – {{ club_name }}{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h2>Redigera tidigare bok</h2>
+  <form method="post" action="{{ url_for('admin.past_book_edit', pid=pb['id']) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label>Titel <input type="text" name="title" value="{{ pb['title'] }}" required></label>
+    <label>Författare <input type="text" name="author" value="{{ pb['author'] }}"></label>
+    <label>Läsdatum <input type="date" name="read_date" value="{{ pb['read_date'] or '' }}"></label>
+    <fieldset>
+      <legend>Vilka läste boken?</legend>
+      {% for m in members %}
+        <label><input type="checkbox" name="member_ids" value="{{ m['id'] }}" {% if m['id'] in readers %}checked{% endif %}> {{ m['name'] }}</label>
+      {% endfor %}
+    </fieldset>
+    <button type="submit" class="btn primary">Spara</button>
+    <a class="btn" href="{{ url_for('admin.panel') }}">Tillbaka</a>
+  </form>
+  <hr>
+  <form method="post" action="{{ url_for('admin.past_book_delete', pid=pb['id']) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn danger">Ta bort boken</button>
+  </form>
+</section>
+{% endblock %}

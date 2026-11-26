@@ -62,6 +62,20 @@ CREATE TABLE IF NOT EXISTS read_marks (
     UNIQUE(round_id, member_id)
 );
 
+CREATE TABLE IF NOT EXISTS past_books (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    author TEXT NOT NULL DEFAULT '',
+    read_date TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS past_book_readers (
+    past_book_id INTEGER NOT NULL REFERENCES past_books(id) ON DELETE CASCADE,
+    member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+    PRIMARY KEY (past_book_id, member_id)
+);
+
 CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
