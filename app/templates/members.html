@@ -13,7 +13,7 @@
         {% endif %}
         <div class="member-info">
           <strong>{{ m['name'] }}</strong>
-          <span class="muted">{{ m['email'] }}</span>
+          <span class="muted truncate" title="{{ m['email'] }}">{{ m['email'] }}</span>
           <span class="muted">
             {% if m['is_admin'] %}Admin · {% endif %}
             rösträtt: {{ 'ja' if m['voting_active'] else 'nej' }} ·
