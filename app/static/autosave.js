@@ -28,9 +28,17 @@ document.addEventListener("DOMContentLoaded", () => {
         headers: { "X-Autosave": "1" },
         credentials: "same-origin",
       })
-        .then((r) => {
-          if (r.ok) {
+        .then(async (r) => {
+          let data = {};
+          try {
+            data = await r.json();
+          } catch (e) {
+            data = {};
+          }
+          if (r.ok && data.ok) {
             saveToast("Sparad ✓", "saved");
+          } else if (data.errors && data.errors.length) {
+            saveToast("Kunde inte spara: " + data.errors.join("; "), "error");
           } else {
             saveToast("Kunde inte spara (" + r.status + ")", "error");
           }

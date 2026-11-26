@@ -49,6 +49,10 @@ def register(app):
     @app.after_request
     def autosave_returns_json(response):
         if request.headers.get("X-Autosave") and response.status_code in (301, 302, 303):
+            flashes = session.pop("_flashes", [])
+            errors = [m for category, m in flashes if category == "error"]
+            if errors:
+                return jsonify({"ok": False, "errors": errors})
             return jsonify({"ok": True, "redirect": response.headers.get("Location", "")})
         return response
 
