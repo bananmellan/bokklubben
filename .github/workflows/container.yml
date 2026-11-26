@@ -2,7 +2,7 @@ name: Build and push container image
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'vibe/**']
   workflow_dispatch:
 
 permissions:
@@ -32,7 +32,7 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=raw,value=latest,enable=${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
+            type=raw,value=latest,enable=${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/vibe/') }}
             type=sha,format=short
 
       - name: Build and push
