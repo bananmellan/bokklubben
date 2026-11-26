@@ -232,3 +232,4 @@ legend { font-weight: 600; padding: 0 0.3rem; }
 }
 .save-toast.saving { background: #9a6a00; }
 .save-toast.saved { background: #1e6b2f; }
+.save-toast.error { background: var(--danger); }

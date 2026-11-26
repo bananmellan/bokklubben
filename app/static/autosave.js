@@ -17,23 +17,25 @@ function saveToast(msg, cls, sticky) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  if (sessionStorage.getItem("autosave_state") === "saving") {
-    sessionStorage.removeItem("autosave_state");
-    saveToast("Sparad ✓", "saved");
-  }
-
-  const forms = document.querySelectorAll("form[data-autosave]");
-  forms.forEach((form) => {
+  document.querySelectorAll("form[data-autosave]").forEach((form) => {
     let timer = null;
     const submit = () => {
-      const active = document.activeElement;
-      if (active && active.name) {
-        sessionStorage.setItem("autosave_focus", active.name);
-      }
-      sessionStorage.setItem("autosave_scroll", String(window.scrollY));
-      sessionStorage.setItem("autosave_state", "saving");
+      const fd = new FormData(form);
       saveToast("Sparar…", "saving", true);
-      form.requestSubmit();
+      fetch(form.action, {
+        method: "POST",
+        body: fd,
+        headers: { "X-Autosave": "1" },
+        credentials: "same-origin",
+      })
+        .then((r) => {
+          if (r.ok) {
+            saveToast("Sparad ✓", "saved");
+          } else {
+            saveToast("Kunde inte spara (" + r.status + ")", "error");
+          }
+        })
+        .catch(() => saveToast("Kunde inte spara", "error"));
     };
     form.addEventListener("change", (e) => {
       const t = e.target;
@@ -47,16 +49,4 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   });
-
-  const y = sessionStorage.getItem("autosave_scroll");
-  if (y !== null) {
-    sessionStorage.removeItem("autosave_scroll");
-    window.scrollTo(0, parseInt(y, 10) || 0);
-  }
-  const focusName = sessionStorage.getItem("autosave_focus");
-  if (focusName) {
-    sessionStorage.removeItem("autosave_focus");
-    const el = document.querySelector(`[name="${CSS.escape(focusName)}"]`);
-    if (el) el.focus();
-  }
 });

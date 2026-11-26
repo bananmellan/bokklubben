@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from functools import wraps
 
-from flask import abort, current_app, redirect, request, session, url_for
+from flask import abort, current_app, jsonify, redirect, request, session, url_for
 
 from .db import execute, one
 
@@ -45,6 +45,12 @@ def register(app):
             if not sent or not hmac.compare_digest(sent, session.get("_csrf_token", "")):
                 abort(400, "Ogiltig eller saknad CSRF-token")
         return None
+
+    @app.after_request
+    def autosave_returns_json(response):
+        if request.headers.get("X-Autosave") and response.status_code in (301, 302, 303):
+            return jsonify({"ok": True, "redirect": response.headers.get("Location", "")})
+        return response
 
 
 def current_member():
