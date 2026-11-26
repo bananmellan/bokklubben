@@ -197,7 +197,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (p < 1) {
             requestAnimationFrame(frame);
           } else {
-            resultEl.textContent = j.member.name + " får välja nästa böcker!";
+            resultEl.textContent = j.member.name + " får välja nästa bok!";
             spinning = false;
             setTimeout(() => window.location.reload(), 1800);
           }
