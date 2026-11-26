@@ -4,11 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="csrf" content="{{ csrf_token() }}">
+  <meta name="color-scheme" content="light dark">
   <title>{% block title %}{{ club_name }}{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <header class="topbar">
+    {% if member %}
+    <button class="back-btn" type="button" title="Tillbaka"
+            onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href = '{{ url_for('main.index') }}'; }">← Tillbaka</button>
+    {% endif %}
     <h1 class="brand"><a href="{{ url_for('main.index') }}">📚 {{ club_name }}</a></h1>
     {% if member %}
     <nav class="nav">

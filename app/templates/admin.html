@@ -7,7 +7,7 @@
   <form method="post" action="{{ url_for('admin.settings') }}" class="inline-form" data-autosave>
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label>Klubbens namn <input type="text" name="club_name" value="{{ club_name }}"></label>
-    <button type="submit" class="btn">Spara</button>
+    <span class="muted">(sparas automatiskt)</span>
   </form>
 </section>
 

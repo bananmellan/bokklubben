@@ -45,6 +45,11 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .catch(() => saveToast("Kunde inte spara", "error"));
     };
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      clearTimeout(timer);
+      submit();
+    });
     form.addEventListener("change", (e) => {
       const t = e.target;
       if (!t || !t.name) return;

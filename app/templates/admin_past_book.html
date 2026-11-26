@@ -14,8 +14,6 @@
         <label><input type="checkbox" name="member_ids" value="{{ m['id'] }}" {% if m['id'] in readers %}checked{% endif %}> {{ m['name'] }}</label>
       {% endfor %}
     </fieldset>
-    <button type="submit" class="btn primary">Spara</button>
-    <a class="btn" href="{{ url_for('admin.panel') }}">Tillbaka</a>
   </form>
   <hr>
   <form method="post" action="{{ url_for('admin.past_book_delete', pid=pb['id']) }}">
