@@ -1,4 +1,27 @@
+function saveToast(msg, cls, sticky) {
+  let el = document.getElementById("save-toast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "save-toast";
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.className = "save-toast " + (cls || "");
+  el.style.display = "block";
+  clearTimeout(el._t);
+  if (!sticky) {
+    el._t = setTimeout(() => {
+      el.style.display = "none";
+    }, 2500);
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  if (sessionStorage.getItem("autosave_state") === "saving") {
+    sessionStorage.removeItem("autosave_state");
+    saveToast("Sparad ✓", "saved");
+  }
+
   const forms = document.querySelectorAll("form[data-autosave]");
   forms.forEach((form) => {
     let timer = null;
@@ -8,6 +31,8 @@ document.addEventListener("DOMContentLoaded", () => {
         sessionStorage.setItem("autosave_focus", active.name);
       }
       sessionStorage.setItem("autosave_scroll", String(window.scrollY));
+      sessionStorage.setItem("autosave_state", "saving");
+      saveToast("Sparar…", "saving", true);
       form.requestSubmit();
     };
     form.addEventListener("change", (e) => {

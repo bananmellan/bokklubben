@@ -50,6 +50,13 @@ Data (SQLite database, uploaded avatars, secret key) lives in the mounted `/data
   ```
   Keep the token in a `chmod 600` file or env var; never commit it. Note that podman stores credentials per user: for a rootless quadlet (`systemctl --user`) log in as your user; for a root quadlet, use `sudo podman login ...`, or set `Environment=REGISTRY_AUTH_FILE=/path/to/auth.json` in the `.container` file to share one auth file.
 
+## Data safety (migrations & backups)
+
+- All data lives in the `/data` volume (named volume `bokklubben-data` per the quadlet). Image updates and container restarts keep the volume — **never run `podman volume rm bokklubben-data`**.
+- **Backups:** on every container start, a consistent snapshot of the SQLite database (via the SQLite backup API, safe with WAL) is written to `backups/bokklubben-<timestamp>.db` inside the volume; the 50 newest are kept. Admins can also create a backup or download one from the admin panel (*Backup*). Copy the `backups/` directory off the server regularly (e.g. rsync/scp from `~/.local/share/containers/storage/volumes/bokklubben-data/_data/backups`) — backups inside the volume do not protect against volume loss.
+- **Migrations:** schema changes are applied as ordered migrations listed in `MIGRATIONS` in `app/db.py`, tracked in the `schema_migrations` table. Never delete rows or tables in a migration — only add (`CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ADD COLUMN`, copies into new tables). The current schema is migration `001_base`; existing databases are detected and marked without touching data.
+- **Restore:** stop the service (`systemctl --user stop bokklubben`), copy a backup over `~/.local/share/containers/storage/volumes/bokklubben-data/_data/bokklubben.db` (remove `bokklubben.db-wal`/`-shm` if present), then start the service again.
+
 ## Configuration (environment variables)
 
 | Variable | Default | Description |

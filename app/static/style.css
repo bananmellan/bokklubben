@@ -216,3 +216,19 @@ hr { border: none; border-top: 1px solid var(--line); margin: 1.2rem 0; }
 
 fieldset { border: 1px solid var(--line); border-radius: 8px; margin: 0.8rem 0; }
 legend { font-weight: 600; padding: 0 0.3rem; }
+
+.save-toast {
+  display: none;
+  position: fixed;
+  right: 1.2rem;
+  bottom: 1.2rem;
+  z-index: 1000;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--muted);
+  box-shadow: 0 6px 18px rgba(43, 33, 24, 0.3);
+}
+.save-toast.saving { background: #9a6a00; }
+.save-toast.saved { background: #1e6b2f; }

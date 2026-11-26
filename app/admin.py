@@ -1,8 +1,8 @@
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, send_file, url_for
 
 from . import services
 from .auth import admin_required
-from .db import execute, one, query
+from .db import backup_database, execute, one, query
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -96,6 +96,21 @@ def settings():
     services.set_setting("club_name", club_name)
     flash("Inställningar sparade.", "success")
     return redirect(url_for("admin.panel"))
+
+
+@bp.route("/backup", methods=["POST"])
+@admin_required
+def backup_now():
+    path = backup_database(current_app.config["DATABASE_PATH"], current_app.config["DATA_DIR"] / "backups")
+    flash(f"Backup skapad: {path.name}", "success")
+    return redirect(url_for("admin.panel"))
+
+
+@bp.route("/backup/download")
+@admin_required
+def backup_download():
+    path = backup_database(current_app.config["DATABASE_PATH"], current_app.config["DATA_DIR"] / "backups")
+    return send_file(path, as_attachment=True, download_name="bokklubben-backup.db")
 
 
 @bp.route("/members", methods=["POST"])

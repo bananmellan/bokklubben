@@ -12,6 +12,20 @@
 </section>
 
 <section class="card">
+  <h2>Backup</h2>
+  <p class="muted">
+    En konsekvent backup av SQLite-databasen tas automatiskt vid varje start av containern och sparas i
+    <code>backups/</code> i data-volymen (de 50 senaste sparas). Schemaändringar körs som migrationer
+    (tabellen <code>schema_migrations</code>) — aldrig genom att tömma databasen.
+  </p>
+  <form method="post" action="{{ url_for('admin.backup_now') }}" class="inline-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn">Skapa backup nu</button>
+  </form>
+  <a class="btn" href="{{ url_for('admin.backup_download') }}">Ladda ner backup av databasen</a>
+</section>
+
+<section class="card">
   <h2>Hjulpool</h2>
   <p>Kandidater just nu ({{ pool | length }}): {{ pool | map(attribute='name') | join(', ') or 'inga' }}</p>
   <form method="post" action="{{ url_for('admin.wheel_reset') }}">

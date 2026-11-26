@@ -1,4 +1,6 @@
+import os
 import sqlite3
+from datetime import datetime, timezone
 
 from flask import current_app, g
 
@@ -100,11 +102,53 @@ def close_db(_exc=None):
         db.close()
 
 
+MIGRATIONS = [
+    ("001_base", SCHEMA),
+]
+
+BACKUP_KEEP = 50
+
+
+def backup_database(db_path, backup_dir, keep=BACKUP_KEEP):
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    dest_path = backup_dir / f"bokklubben-{stamp}.db"
+    src = sqlite3.connect(db_path, timeout=10)
+    dest = sqlite3.connect(str(dest_path))
+    try:
+        src.backup(dest)
+    finally:
+        dest.close()
+        src.close()
+    files = sorted(backup_dir.glob("bokklubben-*.db"))
+    if keep:
+        for old in files[:-keep]:
+            try:
+                old.unlink()
+            except OSError:
+                pass
+    return dest_path
+
+
 def init_db(app):
-    db = sqlite3.connect(app.config["DATABASE_PATH"], timeout=10)
+    db_path = app.config["DATABASE_PATH"]
+    if os.path.exists(db_path):
+        try:
+            backup_database(db_path, app.config["DATA_DIR"] / "backups")
+        except Exception:
+            pass
+    db = sqlite3.connect(db_path, timeout=10)
     db.row_factory = sqlite3.Row
     db.execute("PRAGMA foreign_keys = ON")
-    db.executescript(SCHEMA)
+    db.execute(
+        "CREATE TABLE IF NOT EXISTS schema_migrations ("
+        "version TEXT PRIMARY KEY, applied_at TEXT NOT NULL DEFAULT (datetime('now')))"
+    )
+    applied = {r["version"] for r in db.execute("SELECT version FROM schema_migrations")}
+    for version, sql in MIGRATIONS:
+        if version not in applied:
+            db.executescript(sql)
+            db.execute("INSERT INTO schema_migrations(version) VALUES (?)", (version,))
     db.execute("INSERT OR IGNORE INTO settings(key, value) VALUES ('club_name', 'Bokklubben')")
     has_members = db.execute("SELECT COUNT(*) AS c FROM members").fetchone()["c"] > 0
     has_rounds = db.execute("SELECT COUNT(*) AS c FROM rounds").fetchone()["c"] > 0
