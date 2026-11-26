@@ -30,7 +30,7 @@
 
   {% if round['state'] == 'candidates' %}
     <h3>Bokval av {{ chooser['name'] if chooser else 'okänd' }}</h3>
-    {% if round['chooser_id'] == member['id'] or member['is_admin'] %}
+    {% if round['chooser_id'] == member['id'] %}
       <p>Lägg till exakt 3 bokkandidater, sedan startar omröstningen.</p>
       <form method="post" action="{{ url_for('main.add_candidate') }}" class="inline-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -55,7 +55,7 @@
             <strong>{{ c['title'] }}</strong>{% if c['author'] %} – {{ c['author'] }}{% endif %}
             {% if c['description'] %}<br><span class="muted">{{ c['description'] }}</span>{% endif %}
           </div>
-          {% if round['state'] == 'candidates' and (round['chooser_id'] == member['id'] or member['is_admin']) %}
+          {% if round['state'] == 'candidates' and round['chooser_id'] == member['id'] %}
             <form method="post" action="{{ url_for('main.delete_candidate', cid=c['id']) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="btn danger small">Ta bort</button>

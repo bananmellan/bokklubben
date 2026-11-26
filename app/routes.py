@@ -188,7 +188,7 @@ def add_candidate():
     if r["state"] != "candidates":
         flash("Inget bokval pågår just nu.", "error")
         return redirect(url_for("main.index"))
-    if r["chooser_id"] != member["id"] and not member["is_admin"]:
+    if r["chooser_id"] != member["id"]:
         abort(403)
     title = request.form.get("title", "").strip()
     author = request.form.get("author", "").strip()
@@ -217,7 +217,7 @@ def delete_candidate(cid):
     if cand is None:
         abort(404)
     r = one("SELECT * FROM rounds WHERE id = ?", (cand["round_id"],))
-    if r["state"] != "candidates" or (r["chooser_id"] != member["id"] and not member["is_admin"]):
+    if r["state"] != "candidates" or r["chooser_id"] != member["id"]:
         abort(403)
     execute("DELETE FROM book_candidates WHERE id = ?", (cid,))
     audit(member["id"], "candidate_delete", f"Omgång #{cand['round_id']}: '{cand['title']}' borttagen")
@@ -230,7 +230,7 @@ def delete_candidate(cid):
 def submit_candidates():
     member = auth.current_member()
     r = services.current_round()
-    if r["state"] != "candidates" or (r["chooser_id"] != member["id"] and not member["is_admin"]):
+    if r["state"] != "candidates" or r["chooser_id"] != member["id"]:
         abort(403)
     count = one("SELECT COUNT(*) AS c FROM book_candidates WHERE round_id = ?", (r["id"],))["c"]
     if count != 3:

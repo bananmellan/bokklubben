@@ -6,7 +6,7 @@ A website for our book club, in Swedish. One container, SQLite persistence, pass
 
 - Members are created by an admin (name + email). Login is passwordless: a 6-digit code is emailed to the member's address (via your SMTP server, e.g. postfix on the same host).
 - A spinning wheel (with each member's profile picture on its segment) picks who gets to choose the next 3 book candidates.
-- The club votes on the candidates. The chooser's vote counts 1.5 points, everyone else's 1 point. A member who hasn't read a book loses voting power until they mark that they have read one.
+- Only the person the wheel picked (the chooser) can add the 3 book candidates from the overview — not even admins (admins can still edit candidates retroactively in the admin panel). The club votes on the candidates: the chooser's vote counts 1.5 points, everyone else's 1 point. A member who hasn't read a book loses voting power until they mark that they have read one.
 - After the vote, the club picks a meeting date. When the meeting has come, each member marks whether they read the book; those who didn't lose voting power until they read a book in the club.
 - **Wheel suspension rule:** if a member has *not* read the last 2 books (two "inte läst" marks in a row on decided rounds), they automatically lose their place on the wheel (`wheel_suspended`) until they mark a book as read again — even across wheel resets. Admins can also toggle it manually per member, and every change is written to the audit log.
 - The wheel only contains members who haven't chosen yet in the current cycle. When the pool is empty it resets and everyone is a candidate again. New members become wheel candidates after the next reset (but do have voting power from the start).
