@@ -16,7 +16,7 @@ A website for our book club, in Swedish. One container, SQLite persistence, pass
 
 The image is published to GHCR by the GitHub Actions workflow in `.github/workflows/container.yml` on every push to `main` (and can be triggered manually via *Run workflow*).
 
-1. Create the data directory and install the quadlet:
+1. Create the data directory **before** enabling the service (rootless podman does not create bind-mount sources itself; without it the service fails with `statfs /srv/bokklubben/data: no such file or directory`), then install the quadlet:
 
    ```bash
    sudo mkdir -p /srv/bokklubben/data
