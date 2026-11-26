@@ -11,8 +11,11 @@
 <body>
   <header class="topbar">
     {% if member %}
-    <button class="back-btn" type="button" title="Tillbaka"
-            onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href = '{{ url_for('main.index') }}'; }">← Tillbaka</button>
+      {% set top_level = ['/', '/admin/', '/members', '/stats', '/history'] %}
+      {% if request.path not in top_level %}
+      <button class="back-btn" type="button" title="Tillbaka"
+              onclick="if (window.history.length > 1) { window.history.back(); } else { window.location.href = '{{ url_for('main.index') }}'; }">← Tillbaka</button>
+      {% endif %}
     {% endif %}
     <h1 class="brand"><a href="{{ url_for('main.index') }}">📚 {{ club_name }}</a></h1>
     {% if member %}
